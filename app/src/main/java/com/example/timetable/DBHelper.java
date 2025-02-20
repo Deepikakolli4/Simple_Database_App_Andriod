@@ -40,18 +40,34 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public boolean addSchedule(String subject, String day, String time, String location) {
         SQLiteDatabase db = this.getWritableDatabase();
+
+        // Check if the schedule already exists for the same subject, day, and time
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME +
+                        " WHERE " + COLUMN_SUBJECT + "=? AND " + COLUMN_DAY + "=? AND " + COLUMN_TIME + "=?",
+                new String[]{subject, day, time});
+
+        if (cursor.getCount() > 0) {
+            cursor.close();
+            db.close();
+            return false; // Duplicate entry, don't insert
+        }
+
+        cursor.close();
+
         ContentValues values = new ContentValues();
         values.put(COLUMN_SUBJECT, subject);
         values.put(COLUMN_DAY, day);
         values.put(COLUMN_TIME, time);
         values.put(COLUMN_LOCATION, location);
+
         long result = db.insert(TABLE_NAME, null, values);
+        db.close();
         return result != -1;
     }
 
     public Cursor getSchedule() {
         SQLiteDatabase db = this.getReadableDatabase();
-        return db.rawQuery("SELECT * FROM " + TABLE_NAME, null);
+        return db.rawQuery("SELECT * FROM " + TABLE_NAME + " ORDER BY " + COLUMN_DAY + ", " + COLUMN_TIME, null);
     }
 
     public boolean updateSchedule(int id, String subject, String day, String time, String location) {
@@ -61,11 +77,16 @@ public class DBHelper extends SQLiteOpenHelper {
         values.put(COLUMN_DAY, day);
         values.put(COLUMN_TIME, time);
         values.put(COLUMN_LOCATION, location);
-        return db.update(TABLE_NAME, values, COLUMN_ID + "=?", new String[]{String.valueOf(id)}) > 0;
+
+        int rowsAffected = db.update(TABLE_NAME, values, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
+        db.close();
+        return rowsAffected > 0;
     }
 
     public boolean deleteSchedule(int id) {
         SQLiteDatabase db = this.getWritableDatabase();
-        return db.delete(TABLE_NAME, COLUMN_ID + "=?", new String[]{String.valueOf(id)}) > 0;
+        int rowsDeleted = db.delete(TABLE_NAME, COLUMN_ID + "=?", new String[]{String.valueOf(id)});
+        db.close();
+        return rowsDeleted > 0;
     }
 }

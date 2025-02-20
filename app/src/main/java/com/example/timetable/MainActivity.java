@@ -4,6 +4,7 @@ import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 
@@ -17,7 +18,7 @@ public class MainActivity extends AppCompatActivity {
     ArrayList<String> scheduleArray;
     ArrayAdapter<String> scheduleAdapter;
     ArrayList<Integer> scheduleIds;
-    int selectedId = -1;  // To store the selected item’s ID for update
+    int selectedId = -1;  // Stores selected item’s ID for update
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,16 +50,16 @@ public class MainActivity extends AppCompatActivity {
 
             if (!subject.isEmpty() && !time.isEmpty() && !location.isEmpty()) {
                 if (dbHelper.addSchedule(subject, day, time, location)) {
-                    Toast.makeText(this, "Schedule added!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Schedule added successfully!", Toast.LENGTH_SHORT).show();
                     clearInputs();
                     loadSchedule();
                 }
             } else {
-                Toast.makeText(this, "Fill all fields!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please fill all fields!", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // Select an item from the list to update
+        // Select an item from the list to update or delete
         scheduleList.setOnItemClickListener((parent, view, position, id) -> {
             selectedId = scheduleIds.get(position);  // Get ID of selected item
             String[] data = scheduleArray.get(position).split(" - | at | in ");
@@ -87,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (!subject.isEmpty() && !time.isEmpty() && !location.isEmpty()) {
                 if (dbHelper.updateSchedule(selectedId, subject, day, time, location)) {
-                    Toast.makeText(this, "Schedule updated!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Schedule updated successfully!", Toast.LENGTH_SHORT).show();
                     clearInputs();
                     loadSchedule();
                     addButton.setVisibility(View.VISIBLE);
@@ -95,8 +96,26 @@ public class MainActivity extends AppCompatActivity {
                     selectedId = -1; // Reset selection
                 }
             } else {
-                Toast.makeText(this, "Fill all fields!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please fill all fields!", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        // Long press to delete
+        scheduleList.setOnItemLongClickListener((parent, view, position, id) -> {
+            int deleteId = scheduleIds.get(position);
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Delete Schedule")
+                    .setMessage("Are you sure you want to delete this schedule?")
+                    .setPositiveButton("Yes", (dialog, which) -> {
+                        if (dbHelper.deleteSchedule(deleteId)) {
+                            Toast.makeText(this, "Schedule deleted successfully!", Toast.LENGTH_SHORT).show();
+                            loadSchedule();
+                        }
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+            return true;
         });
     }
 
@@ -107,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
 
         while (cursor.moveToNext()) {
             scheduleIds.add(cursor.getInt(0));
-            scheduleArray.add(cursor.getString(1) + " - " + cursor.getString(2) + " at " + cursor.getString(3) + " in " + cursor.getString(4));
+            scheduleArray.add(cursor.getString(1) + " - " + cursor.getString(3) + " at " + cursor.getString(2) + " in " + cursor.getString(4));
         }
 
         scheduleAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, scheduleArray);
